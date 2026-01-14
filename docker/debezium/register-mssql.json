@@ -1,0 +1,34 @@
+{
+  "name": "mssql-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.sqlserver.SqlServerConnector",
+    "tasks.max": "1",
+    "database.hostname": "mssql",
+    "database.port": "1433",
+    "database.user": "sa",
+    "database.password": "Karani123!",
+    "database.names": "payment",
+    "database.server.name": "dbserver1",
+    "table.include.list": "dbo.Transactions",
+    "topic.prefix": "dbserver1.payment",
+    
+    "snapshot.mode": "initial",
+    "snapshot.isolation.mode": "read_committed",
+    
+    "database.encrypt": "false",
+    "database.trustServerCertificate": "true",
+    
+    "schema.history.internal.kafka.bootstrap.servers": "kafka:9092",
+    "schema.history.internal.kafka.topic": "schema-changes.payment",
+    
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "false",
+    
+    "transforms": "unwrap",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.unwrap.drop.tombstones": "false",
+    "transforms.unwrap.delete.handling.mode": "rewrite"
+  }
+}
