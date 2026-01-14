@@ -28,6 +28,6 @@ var app = builder.Build();
 app.UseMetricServer();
 app.UseHttpMetrics();
 
-app.MapHealthChecks("/health");
+//app.MapHealthChecks("/health");
 app.MapControllers();
 app.Run();

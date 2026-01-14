@@ -36,7 +36,6 @@ namespace Payment.ReadConsumer.Consumers
 
             using var consumer = new ConsumerBuilder<string, string>(config).Build();
 
-            // Debezium'un oluşturduğu topic adı
             var topic = "dbserver1.payment.payment.dbo.Transactions";
             consumer.Subscribe(topic);
 
@@ -67,7 +66,6 @@ namespace Payment.ReadConsumer.Consumers
                     {
                         _logger.LogError(ex, "Failed to process message after retries");
 
-                        // DLQ'ya gönder
                         await _dlq.PublishAsync(
                             "payment.transactions.dlq",
                             cr.Message.Key ?? "null",
@@ -98,35 +96,63 @@ namespace Payment.ReadConsumer.Consumers
                 var doc = JsonDocument.Parse(value);
                 var root = doc.RootElement;
 
-                //// Debezium message format'ı kontrol et
-                //if (!root.TryGetProperty("payload", out var payload))
-                //{
-                //    _logger.LogWarning("Message doesn't have payload property");
-                //    return;
-                //}
-
-                //// After değerini al (yeni state)
-                //if (!payload.TryGetProperty("after", out var after))
-                //{
-                //    _logger.LogWarning("Payload doesn't have 'after' property (probably a DELETE)");
-                //    return;
-                //}
-
-                //if (after.ValueKind == JsonValueKind.Null)
-                //{
-                //    _logger.LogInformation("'after' is null (DELETE operation), skipping");
-                //    return;
-                //}
-
-                var model = JsonSerializer.Deserialize<TransactionReadModel>(root);
-
-                if (model == null)
+                // Debezium envelope yapısını kontrol et
+                if (!root.TryGetProperty("payload", out var payload))
                 {
-                    _logger.LogWarning("Failed to deserialize model");
+                    _logger.LogWarning("Message doesn't have payload property");
                     return;
                 }
 
-                _logger.LogInformation("Indexing transaction ID: {Id}", model.Id);
+                // Operation type'ı kontrol et (c=create, u=update, d=delete, r=read/snapshot)
+                var op = payload.TryGetProperty("op", out var opElement)
+                    ? opElement.GetString()
+                    : "r";
+
+                _logger.LogInformation("Operation type: {Op}", op);
+
+                // DELETE operasyonu - after null olur
+                if (op == "d")
+                {
+                    if (payload.TryGetProperty("before", out var before) &&
+                        before.ValueKind != JsonValueKind.Null)
+                    {
+                        var id = before.GetProperty("Id").GetInt64();
+                        _logger.LogInformation("Deleting transaction ID: {Id}", id);
+
+                        await _elastic.DeleteAsync<TransactionReadModel>(id, d =>
+                            d.Index("transactions")
+                        );
+                    }
+                    return;
+                }
+
+                // CREATE, UPDATE veya SNAPSHOT için after'ı kullan
+                if (!payload.TryGetProperty("after", out var after))
+                {
+                    _logger.LogWarning("Payload doesn't have 'after' property");
+                    return;
+                }
+
+                if (after.ValueKind == JsonValueKind.Null)
+                {
+                    _logger.LogInformation("'after' is null, skipping");
+                    return;
+                }
+
+                // After nesnesinden model oluştur
+                var model = new TransactionReadModel
+                {
+                    Id = after.GetProperty("Id").GetInt64(),
+                    UserId = after.GetProperty("UserId").GetInt64(),
+                    Amount = ParseDecimal(after.GetProperty("Amount")),
+                    Currency = after.GetProperty("Currency").GetString() ?? "",
+                    Status = after.GetProperty("Status").GetString() ?? ""
+                };
+
+                _logger.LogInformation(
+                    "Processing transaction - ID: {Id}, UserId: {UserId}, Amount: {Amount}, Currency: {Currency}, Status: {Status}",
+                    model.Id, model.UserId, model.Amount, model.Currency, model.Status
+                );
 
                 var response = await _elastic.IndexAsync(model, i =>
                     i.Index("transactions")
@@ -146,6 +172,27 @@ namespace Payment.ReadConsumer.Consumers
                 _logger.LogError(ex, "JSON parsing error");
                 throw;
             }
+        }
+
+        private decimal ParseDecimal(JsonElement element)
+        {
+            // Debezium decimal'ları double olarak gönderir (decimal.handling.mode: double)
+            if (element.ValueKind == JsonValueKind.Number)
+            {
+                return (decimal)element.GetDouble();
+            }
+
+            // String olarak gelirse
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                if (decimal.TryParse(element.GetString(), out var result))
+                {
+                    return result;
+                }
+            }
+
+            _logger.LogWarning("Could not parse decimal from: {Value}", element.GetRawText());
+            return 0;
         }
     }
 }

@@ -7,7 +7,7 @@ var builder = Host.CreateApplicationBuilder(args);
 // Elasticsearch client
 builder.Services.AddSingleton<IElasticClient>(sp =>
 {
-    var settings = new ConnectionSettings(new Uri("http://elasticsearch:9200"))
+    var settings = new ConnectionSettings(new Uri("http://localhost:9200/"))
         .DefaultIndex("transactions");
 
     return new ElasticClient(settings);

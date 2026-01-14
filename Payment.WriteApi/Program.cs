@@ -39,7 +39,7 @@ app.UseMetricServer();
 app.UseHttpMetrics();
 
 app.UseRateLimiter();
-app.MapHealthChecks("/health");
+//app.MapHealthChecks("/health");
 
 app.MapControllers();
 app.Run();

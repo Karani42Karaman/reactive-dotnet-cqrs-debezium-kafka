@@ -2,7 +2,18 @@ Write-Host "Starting CQRS Payment System Setup..." -ForegroundColor Green
 
 # 1. Docker servisleri baslat
 Write-Host "Starting Docker services..." -ForegroundColor Cyan
-docker-compose down
+# Docker containerları durdur ve sil
+docker-compose down -v
+
+# Tüm containerları sil
+docker rm -f $(docker ps -aq)
+
+# Tüm volume'ları sil
+docker volume rm $(docker volume ls -q)
+
+# Tüm networkları temizle (default olanlar kalacak)
+docker network prune -f
+# Docker containerları baslat
 docker-compose up -d
 
 Write-Host "Waiting for services to be healthy..." -ForegroundColor Yellow
@@ -74,12 +85,10 @@ $connectorConfig = @'
     "schema.history.internal.kafka.topic": "schema-changes.payment",
     "key.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
-    "key.converter.schemas.enable": "false",
-    "value.converter.schemas.enable": "false",
-    "transforms": "unwrap",
-    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
-    "transforms.unwrap.drop.tombstones": "false",
-    "transforms.unwrap.delete.handling.mode": "rewrite"
+    "key.converter.schemas.enable": "true",
+    "value.converter.schemas.enable": "true",
+    "decimal.handling.mode": "double",
+    "time.precision.mode": "adaptive_time_microseconds"
   }
 }
 '@
