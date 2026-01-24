@@ -24,6 +24,26 @@ builder.Services.AddRateLimiter(opt =>
     });
 });
 
+// Custom metrics tanımla
+var transactionCounter = Metrics.CreateCounter(
+    "payment_transactions_total", 
+    "Total number of transactions",
+    new CounterConfiguration
+    {
+        LabelNames = new[] { "status", "currency" }
+    }
+);
+
+var transactionAmount = Metrics.CreateHistogram(
+    "payment_transaction_amount",
+    "Transaction amounts",
+    new HistogramConfiguration
+    {
+        LabelNames = new[] { "currency" },
+        Buckets =  Histogram.ExponentialBuckets(1, 2, 10)
+    }
+);
+
 //builder.Services.AddHealthChecks()
 //    .AddDbContextCheck<WriteDbContext>();
 

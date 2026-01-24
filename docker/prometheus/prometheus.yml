@@ -2,6 +2,16 @@ global:
   scrape_interval: 5s
   evaluation_interval: 5s
 
+# Alert kurallarını yükle
+rule_files:
+  - "alerts.yml"
+
+# Alertmanager config (opsiyonel)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+        
 scrape_configs:
   # Prometheus self-monitoring
   - job_name: "prometheus"

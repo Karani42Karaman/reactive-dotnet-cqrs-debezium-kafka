@@ -1,0 +1,107 @@
+{
+  "dashboard": {
+    "title": "Payment CQRS System",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "HTTP Request Rate (Write API)",
+        "targets": [
+          {
+            "expr": "rate(http_requests_received_total{instance=\"write-api\"}[5m])",
+            "legendFormat": "{{method}} {{code}}"
+          }
+        ],
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+      },
+      {
+        "id": 2,
+        "title": "HTTP Request Rate (Read API)",
+        "targets": [
+          {
+            "expr": "rate(http_requests_received_total{instance=\"read-api\"}[5m])",
+            "legendFormat": "{{method}} {{code}}"
+          }
+        ],
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+      },
+      {
+        "id": 3,
+        "title": "Response Time (Write API)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{instance=\"write-api\"}[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{instance=\"write-api\"}[5m]))",
+            "legendFormat": "p99"
+          }
+        ],
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "targets": [
+          {
+            "expr": "rate(http_requests_received_total{code=~\"5..\"}[5m])",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+        "alert": {
+          "name": "High Error Rate",
+          "conditions": [
+            {
+              "evaluator": { "params": [0.01], "type": "gt" },
+              "query": { "params": ["A", "5m", "now"] }
+            }
+          ]
+        }
+      },
+      {
+        "id": 5,
+        "title": "Active Requests",
+        "targets": [
+          {
+            "expr": "http_requests_in_progress{instance=~\"write-api|read-api\"}",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 16, "w": 6, "h": 4 }
+      },
+      {
+        "id": 6,
+        "title": "Total Requests",
+        "targets": [
+          {
+            "expr": "sum(http_requests_received_total)",
+            "legendFormat": "Total"
+          }
+        ],
+        "type": "stat",
+        "gridPos": { "x": 6, "y": 16, "w": 6, "h": 4 }
+      },
+      {
+        "id": 7,
+        "title": "Kafka Consumer Lag",
+        "targets": [
+          {
+            "expr": "kafka_consumer_lag",
+            "legendFormat": "{{topic}}"
+          }
+        ],
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 }
+      }
+    ],
+    "refresh": "10s",
+    "time": { "from": "now-1h", "to": "now" }
+  }
+}

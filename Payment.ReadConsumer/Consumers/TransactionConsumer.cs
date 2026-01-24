@@ -12,6 +12,7 @@ namespace Payment.ReadConsumer.Consumers
         private readonly IElasticClient _elastic;
         private readonly DlqProducer _dlq;
         private readonly ILogger<TransactionConsumer> _logger;
+        private readonly string bootstrapServers = Environment.GetEnvironmentVariable("Kafka::BootstrapServers") ?? "localhost:29092";
 
         public TransactionConsumer(
             IElasticClient elastic,
@@ -26,7 +27,7 @@ namespace Payment.ReadConsumer.Consumers
         {
             var config = new ConsumerConfig
             {
-                BootstrapServers = "localhost:29092",
+                BootstrapServers = bootstrapServers,
                 GroupId = "payment-read-consumer",
                 AutoOffsetReset = AutoOffsetReset.Earliest,
                 EnableAutoCommit = false,

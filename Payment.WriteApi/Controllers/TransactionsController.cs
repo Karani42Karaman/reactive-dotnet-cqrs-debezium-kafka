@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Payment.WriteApi.Application.Commands;
+using Prometheus;
 
 namespace Payment.WriteApi.Controllers;
 
@@ -8,6 +9,21 @@ namespace Payment.WriteApi.Controllers;
 public class TransactionsController : ControllerBase
 {
     private readonly CreateTransactionHandler _handler;
+    
+    // Metrikleri static tanımla
+    private static readonly Counter _transactionCounter = 
+        Metrics.CreateCounter(
+            "payment_transactions_total",
+            "Total transactions",
+            "status", "currency"
+        );
+
+    private static readonly Histogram _transactionAmount = 
+        Metrics.CreateHistogram(
+            "payment_transaction_amount",
+            "Transaction amounts",
+            "currency"
+        );
 
     public TransactionsController(CreateTransactionHandler handler)
     {
@@ -17,7 +33,27 @@ public class TransactionsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateTransactionCommand command)
     {
-        var id = await _handler.Handle(command);
-        return Ok(new { Id = id });
+        try
+        {
+            var id = await _handler.Handle(command);
+
+            // Metrikleri kaydet
+            _transactionCounter
+                .WithLabels("success", command.Currency)
+                .Inc();
+
+            _transactionAmount
+                .WithLabels(command.Currency)
+                .Observe((double)command.Amount);
+
+            return Ok(new { Id = id });
+        }
+        catch (Exception ex)
+        {
+            _transactionCounter
+                .WithLabels("failed", command.Currency)
+                .Inc();
+            throw;
+        }
     }
 }

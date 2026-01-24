@@ -9,9 +9,13 @@ namespace Payment.ReadConsumer.Infrastructure.Kafka
 
         public DlqProducer()
         {
+
+
+            var bootstrapServers = Environment.GetEnvironmentVariable("Kafka::BootstrapServers");
+
             var config = new ProducerConfig
             {
-                BootstrapServers = "localhost:29092"
+                BootstrapServers = bootstrapServers ?? "localhost:29092"
             };
 
             _producer = new ProducerBuilder<string, string>(config).Build();

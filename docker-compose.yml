@@ -142,6 +142,94 @@ services:
     networks:
       - payment-network
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - payment-network
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./docker/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - payment-network
+    restart: unless-stopped
+      
+   # ==================== .NET APPLICATIONS ====================
+  
+  payment-write-api:
+    build:
+      context: .
+      dockerfile: Payment.WriteApi/Dockerfile
+    container_name: payment-write-api
+    ports:
+      - "6208:80"
+    depends_on:
+      mssql:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__MySql=Server=mssql,1433;Database=payment;User Id=sa;Password=Karani123!;TrustServerCertificate=True;
+    networks:
+      - payment-network
+    restart: unless-stopped
+
+  payment-read-api:
+    build:
+      context: .
+      dockerfile: Payment.ReadApi/Dockerfile
+    container_name: payment-read-api
+    ports:
+      - "5289:80"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - Elasticsearch__Uri=http://elasticsearch:9200
+    networks:
+      - payment-network
+    restart: unless-stopped
+
+  payment-read-consumer:
+    build:
+      context: .
+      dockerfile: Payment.ReadConsumer/Dockerfile
+    container_name: payment-read-consumer
+    depends_on:
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - Kafka__BootstrapServers=kafka:9092
+      - Elasticsearch__Uri=http://elasticsearch:9200
+    networks:
+      - payment-network
+    restart: unless-stopped
+    
 networks:
   payment-network:
     driver: bridge
@@ -150,3 +238,4 @@ volumes:
   mssql-data:
   kafka-data:
   es-data:
+  grafana-data:       
