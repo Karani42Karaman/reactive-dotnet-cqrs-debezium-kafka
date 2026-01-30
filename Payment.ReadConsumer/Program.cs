@@ -4,11 +4,27 @@ using Payment.ReadConsumer.Infrastructure.Elastic;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+var loggerFactory = LoggerFactory.Create(logging =>
+{
+    logging.AddConsole();
+    logging.AddDebug();
+});
+
+var logger = loggerFactory.CreateLogger("Startup");
+
+logger.LogInformation("Builder aşamasındayım");
+
 // Elasticsearch client
 builder.Services.AddSingleton<IElasticClient>(sp =>
 {
-    var settings = new ConnectionSettings(new Uri("http://localhost:9200/"))
-        .DefaultIndex("transactions");
+   var uri = builder.Configuration.GetValue<string>("Elasticsearch:Uri");
+    logger.LogInformation("Elasticsearch URI: {Uri}", uri);
+    
+    if (string.IsNullOrEmpty(uri))
+        throw new Exception("Elasticsearch:Uri boş");
+
+    var settings = new ConnectionSettings(new Uri(uri))
+        .DefaultIndex("transactions");;
 
     return new ElasticClient(settings);
 });
@@ -17,6 +33,8 @@ builder.Services.AddSingleton<IElasticClient>(sp =>
 builder.Services.AddHostedService<TransactionConsumer>();
 
 var app = builder.Build();
+
+
 
 //  Index ensure (startup'ta)
 using (var scope = app.Services.CreateScope())

@@ -9,22 +9,27 @@ namespace Payment.ReadConsumer.Consumers
 {
     public class TransactionConsumer : BackgroundService
     {
-        private readonly IElasticClient _elastic;
-        private readonly DlqProducer _dlq;
+       private readonly IElasticClient _elastic;
         private readonly ILogger<TransactionConsumer> _logger;
-        private readonly string bootstrapServers = Environment.GetEnvironmentVariable("Kafka::BootstrapServers") ?? "localhost:29092";
+        private readonly IConfiguration _configuration;
+        private readonly DlqProducer _dlq;
 
         public TransactionConsumer(
             IElasticClient elastic,
-            ILogger<TransactionConsumer> logger)
+            ILogger<TransactionConsumer> logger,
+            IConfiguration configuration)
         {
             _elastic = elastic;
-            _dlq = new DlqProducer();
             _logger = logger;
+            _configuration = configuration;
+            _dlq = new DlqProducer(configuration);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            var bootstrapServers = _configuration["Kafka:BootstrapServers"];
+            _logger.LogInformation("Kafka Bootstrap Servers: {BootstrapServers}", bootstrapServers);
+
             var config = new ConsumerConfig
             {
                 BootstrapServers = bootstrapServers,

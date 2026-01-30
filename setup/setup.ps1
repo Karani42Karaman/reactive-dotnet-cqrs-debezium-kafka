@@ -3,7 +3,7 @@ Write-Host "Starting CQRS Payment System Setup..." -ForegroundColor Green
 # 1. Docker servisleri baslat
 Write-Host "Starting Docker services..." -ForegroundColor Cyan
 # Docker containerları durdur ve sil
-docker-compose down -v
+#docker-compose down -v
 
 # Tüm containerları sil
 docker rm -f $(docker ps -aq)
