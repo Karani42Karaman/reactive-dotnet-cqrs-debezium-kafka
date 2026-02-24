@@ -7,31 +7,7 @@
 
 ## 📐 Mimari Genel Bakış
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          CLIENT / API CONSUMER                       │
-└───────────────┬─────────────────────────────────┬───────────────────┘
-                │ POST /api/transactions            │ GET /api/transactions/{id}
-                ▼                                   ▼
-  ┌─────────────────────────┐         ┌─────────────────────────┐
-  │   Payment.WriteApi      │         │    Payment.ReadApi       │
-  │   (Port: 6208)          │         │    (Port: 5289)          │
-  │   ASP.NET Core 9        │         │    ASP.NET Core 9        │
-  └────────────┬────────────┘         └────────────┬────────────┘
-               │                                    │
-               ▼                                    ▼
-  ┌─────────────────────────┐         ┌─────────────────────────┐
-  │   MSSQL Server 2022     │         │    Elasticsearch 8.12    │
-  │   (Write DB)            │         │    (Read Store)          │
-  └────────────┬────────────┘         └────────────┬────────────┘
-               │                                    ▲
-               │ CDC (Change Data Capture)           │ Index
-               ▼                                    │
-  ┌─────────────────────────┐         ┌─────────────────────────┐
-  │   Debezium              │─Kafka──▶│  Payment.ReadConsumer   │
-  │   (Kafka Connect)       │  Topic  │  (Background Worker)    │
-  └─────────────────────────┘         └─────────────────────────┘
-```
+![Architecture Diagram](https://github.com/Karani42Karaman/reactive-dotnet-cqrs-debezium-kafka/blob/main/images/architecture.png)
 
 ### Veri Akışı (Step by Step)
 
@@ -347,4 +323,4 @@ Bu proje CQRS'i şu şekilde uygular:
 
 **Query (Okuma) tarafı** yalnızca Elasticsearch'ten okur. MSSQL'e hiçbir zaman dokunmaz. Elasticsearch'in güçlü full-text ve aggregation yetenekleri sayesinde okuma performansı yazma tarafından bağımsız olarak ölçeklendirilebilir.
 
-**Eventual Consistency:** Yazma ve okuma arasında kısa bir gecikme (tipik olarak milisaniyeler) oluşabilir. Bu CDC pipeline'ının doğal bir özelliğidir ve çoğu ödeme sistemi senaryosunda kabul edilebilirdir.# reactive-dotnet-cqrs-debezium-kafka
+**Eventual Consistency:** Yazma ve okuma arasında kısa bir gecikme (tipik olarak milisaniyeler) oluşabilir. Bu CDC pipeline'ının doğal bir özelliğidir ve çoğu ödeme sistemi senaryosunda kabul edilebilirdir.
