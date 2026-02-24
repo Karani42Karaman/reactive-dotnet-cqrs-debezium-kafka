@@ -54,7 +54,7 @@ Payment-CQRS/
 │   └── grafana/                    # Dashboard ve datasource provisioning
 │
 ├── setup/setup.ps1                 # Tüm ortamı ayağa kaldıran setup scripti
-├── fix-grafana.ps1                 # Grafana sorun giderme scripti
+├── datasource-grafana.ps1          # Grafana ekran scripti
 └── docker-compose.yml              # Tüm servisler
 ```
 
